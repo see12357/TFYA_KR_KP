@@ -1,0 +1,10 @@
+program example
+dim x as integer
+dim y as integer
+x = 10
+y = x plus 5
+if x GT y then
+    write x
+else
+    write y
+end
