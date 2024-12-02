@@ -1,0 +1,5 @@
+program MyProgram
+dim a as integer
+a = 123Q
+write(a)
+end

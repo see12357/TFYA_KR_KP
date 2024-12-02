@@ -1,0 +1,9 @@
+program MyProgram
+dim a as integer
+dim b as real
+
+a = 5
+b = a plus mult 3.5
+
+write(b)
+end
