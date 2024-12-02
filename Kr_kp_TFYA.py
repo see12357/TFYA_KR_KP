@@ -173,6 +173,9 @@ class Lexer:
                 self.start_token(c, State.ID)
             elif c.isdigit():
                 self.start_token(c, State.NUM)
+            elif c == ".":
+                # Начало дробного числа
+                self.start_token(c, State.NUM)
             elif c == "{":
                 self.start_token(c, State.COM)
             elif c in self.operators:
@@ -193,7 +196,7 @@ class Lexer:
                 self.finalize_token()
                 self.process_char(c)
         elif self.state == State.NUM:
-            if c.isdigit() or c == '.':
+            if self.is_number_part(c):
                 self.lex_buff += c
             else:
                 self.finalize_token()
@@ -216,6 +219,10 @@ class Lexer:
             self.error("Invalid state in separator processing")
         else:
             self.error(f"Unknown state: {self.state}")
+
+    def is_number_part(self, c: str) -> bool:
+        """Проверяет, может ли символ быть частью числа (целого или действительного)."""
+        return c.isdigit() or c in {'B', 'b', 'O', 'o', 'D', 'd', 'H', 'h', '.', 'E', 'e', '+', '-'}
 
     def start_token(self, c: str, new_state: State) -> None:
         self.lex_buff = c
@@ -256,7 +263,16 @@ class Lexer:
         print(f"Токен добавлен: {self.tokens[-1]}")
 
     def is_valid_number(self, lexeme: str) -> bool:
-        return bool(re.fullmatch(r"\d+(\.\d+)?(e[+-]?\d+)?", lexeme, re.IGNORECASE))
+        """Проверяет корректность числа согласно новым правилам."""
+        # Регулярные выражения для разных типов чисел
+        binary_pattern = r"^[01]+[Bb]$"
+        octal_pattern = r"^[0-7]+[Oo]$"
+        decimal_pattern = r"^\d+([Dd]?)$"
+        hex_pattern = r"^[0-9A-Fa-f]+[Hh]$"
+        real_pattern = r"^\d*(\.\d+)?([Ee][+-]?\d+)?$"
+
+        patterns = [binary_pattern, octal_pattern, decimal_pattern, hex_pattern, real_pattern]
+        return any(re.fullmatch(pattern, lexeme) for pattern in patterns)
 
     def error(self, message: str) -> None:
         raise ValueError(f"{message} at ({self.y_coord}, {self.x_coord})")
@@ -454,9 +470,65 @@ class Parser:
                 return
         self.error("Undeclared or incorrect variable", self.current_token())
 
+    def parse_number(self):
+        """
+        Синтаксический анализ чисел.
+        Распознает как целые числа (включая двоичные, восьмеричные, десятичные, шестнадцатеричные),
+        так и действительные числа с порядком (e, E).
+        """
+        token = self.current_token()
+        if token.token_type != "NUMBER":
+            self.error(f"Ожидалось число, но найдено {token.token_type}: {token.value}")
+
+        lexeme = token.value
+
+        if re.fullmatch(r"^[01]+[Bb]$", lexeme):
+            print(f"Двоичное число: {lexeme}")
+            return {"type": "binary", "value": int(lexeme[:-1], 2)}
+        elif re.fullmatch(r"^[0-7]+[Oo]$", lexeme):
+            print(f"Восьмеричное число: {lexeme}")
+            return {"type": "octal", "value": int(lexeme[:-1], 8)}
+        elif re.fullmatch(r"^\d+([Dd]?)$", lexeme):
+            print(f"Десятичное число: {lexeme}")
+            return {"type": "decimal", "value": int(lexeme.rstrip('Dd'))}
+        elif re.fullmatch(r"^[0-9A-Fa-f]+[Hh]$", lexeme):
+            print(f"Шестнадцатеричное число: {lexeme}")
+            return {"type": "hexadecimal", "value": int(lexeme[:-1], 16)}
+        elif re.fullmatch(r"^\d*(\.\d+)?([Ee][+-]?\d+)?$", lexeme):
+            print(f"Действительное число: {lexeme}")
+            return {"type": "real", "value": float(lexeme)}
+        else:
+            self.error(f"Некорректный формат числа: {lexeme}")
+
+        self.advance_token()
+
+    def parse_expression(self):
+        """
+        Пример использования чисел в выражениях.
+        """
+        left = self.parse_number()
+
+        while self.current_token().token_type == "OPERATOR":
+            operator = self.current_token().value
+            self.advance_token()
+            right = self.parse_number()
+
+            # Выполнение операций (если нужно)
+            if operator == "+":
+                left = {"type": "sum", "value": left["value"] + right["value"]}
+            elif operator == "-":
+                left = {"type": "difference", "value": left["value"] - right["value"]}
+            elif operator == "*":
+                left = {"type": "product", "value": left["value"] * right["value"]}
+            elif operator == "/":
+                left = {"type": "division", "value": left["value"] / right["value"]}
+            else:
+                self.error(f"Неизвестный оператор: {operator}")
+
+        return left
 
 def main():
-    input_file = "input_file_2.txt"  # Имя входного файла
+    input_file = "input_file_4.txt"  # Имя входного файла
     try:
         # Создаем экземпляр лексера и анализируем входной файл
         lexer = Lexer(keywords=KEYWORDS.keys(), separators=SEPARATORS.keys(), operators=OPERATORS.keys())
