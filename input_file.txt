@@ -1,11 +1,29 @@
-program ArithmeticWithLoops
+program test_var
 dim a as integer
 dim b as integer
-dim c as integer
-dim result as boolean
-a = 101B
-b = 20O
-c = 15H
-result = (a GT b) and (c EQ 21D)
-write(result)
+dim alpha as real
+dim beta as real
+
+a = 0
+b = 77
+read alpha
+read beta
+
+while a LE (b plus 2) do
+  if alpha GE 12 then
+    beta = 0.5e12
+    beta = alpha plus beta
+  else
+    alpha = 5e13
+  end
+  a = a plus (2 plus 10 mult 2)
+end
+
+a = 0
+while a LE (b plus 2) do
+  a = a plus 2
+end
+
+
+write (beta plus (alpha mult b) div a)
 end
