@@ -203,8 +203,8 @@ class Lexer:
                 self.process_char(c)
         elif self.state == State.COM:
             if c == '}':
-                self.lex_buff += c
-                self.finalize_token()
+                # Завершение комментария
+                self.finalize_comment()
             else:
                 self.lex_buff += c
         elif self.state == State.OP:
@@ -215,10 +215,14 @@ class Lexer:
                 self.finalize_token()
                 self.process_char(c)
         elif self.state == State.SEP:
-            # Разделители уже обработаны в State.S
             self.error("Invalid state in separator processing")
         else:
             self.error(f"Unknown state: {self.state}")
+
+    def finalize_comment(self) -> None:
+        print(f"Комментарий завершен: {self.lex_buff}")
+        self.lex_buff = ""
+        self.state = State.S
 
     def is_number_part(self, c: str) -> bool:
         """Проверяет, может ли символ быть частью числа (целого или действительного)."""
@@ -460,9 +464,10 @@ class Parser:
                 self.idx += 1
             else:
                 self.error("Expected closing parenthesis", current_token)
+        elif current_token.type == "SEPARATOR" and current_token.value == "[":
+            self.start_compound()  # Новый вызов для обработки блока в квадратных скобках
         else:
             self.error("Unexpected token", current_token)
-
 
     def id_check(self):
         for var in self.tokens_var:
@@ -502,6 +507,23 @@ class Parser:
 
         self.advance_token()
 
+    def start_compound(self):
+        """Обрабатывает составные выражения в квадратных скобках."""
+        if self.current_token().type == "SEPARATOR" and self.current_token().value == "[":
+            self.idx += 1  # Пропускаем '['
+            self.start_o()  # Ожидаем первый оператор внутри составного блока
+
+            while self.current_token().type == "SEPARATOR" and self.current_token().value == ":":
+                self.idx += 1  # Пропускаем ':'
+                self.start_o()  # Обрабатываем следующий оператор
+
+            if self.current_token().type == "SEPARATOR" and self.current_token().value == "]":
+                self.idx += 1  # Пропускаем ']'
+            else:
+                self.error("Expected closing ']' for compound expression", self.current_token())
+        else:
+            self.error("Expected '[' to start a compound expression", self.current_token())
+
     def parse_expression(self):
         """
         Пример использования чисел в выражениях.
@@ -528,7 +550,7 @@ class Parser:
         return left
 
 def main():
-    input_file = "input_file_4.txt"  # Имя входного файла
+    input_file = "input_file_3.txt"  # Имя входного файла
     try:
         # Создаем экземпляр лексера и анализируем входной файл
         lexer = Lexer(keywords=KEYWORDS.keys(), separators=SEPARATORS.keys(), operators=OPERATORS.keys())
