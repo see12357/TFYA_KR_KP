@@ -2,7 +2,7 @@ program test_var
 dim a as integer
 dim b as integer
 dim alpha as real
-dim beta as real
+dim beta as real {comment}
 
 a = 0
 b = 77
