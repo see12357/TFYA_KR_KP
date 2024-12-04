@@ -1,0 +1,13 @@
+program test
+dim a as integer
+dim b as integer
+dim result as integer
+a = 5
+b = 10
+result = [
+  a plus b :
+  b min a :
+  a mult b
+]
+write result
+end
