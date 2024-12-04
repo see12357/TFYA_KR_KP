@@ -1,0 +1,11 @@
+program ArithmeticWithLoops
+dim a as integer
+dim b as integer
+dim c as integer
+dim result as boolean
+a = 101B
+b = 20O
+c = 15H
+result = (a GT b) and (c EQ 21D)
+write(result)
+end
